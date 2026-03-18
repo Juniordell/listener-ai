@@ -1,4 +1,3 @@
-# docker-compose.yml (at root of LISTENER-AI)
 services:
   ollama:
     image: ollama/ollama
@@ -7,13 +6,6 @@ services:
       - "11434:11434"
     volumes:
       - ollama:/root/.ollama
-    # deploy:           # uncomment if you have NVIDIA GPU
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
 
   backend:
     build: ./backend
