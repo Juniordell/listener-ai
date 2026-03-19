@@ -1,5 +1,5 @@
 from pathlib import Path
-from faster_whisper import WhisperModel
+from faster_whisper import WhisperModel # type: ignore
 from openai import OpenAI
 
 PROMPT_FILE = Path(__file__).parent / "system_prompt.txt"
