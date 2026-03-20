@@ -34,3 +34,65 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="AI Transcript App", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/api/status")
+async def get_status():
+    return {
+        "status": "ready" if service else "initializing",
+        "whisper_model": os.getenv("WHISPER_MODEL"),
+        "llm_model": os.getenv("LLM_MODEL"),
+        "llm_base_url": os.getenv("LLM_BASE_URL"),
+    }
+
+
+@app.get("/api/system-prompt")
+async def get_system_prompt():
+    if not service:
+        raise HTTPException(status_code=503, detail="Service not ready")
+    return {"default_prompt": service.get_default_system_prompt()}
+
+
+@app.post("/api/transcribe")
+async def transcribe_audio(audio: Annotated[UploadFile, File()]):
+    if not service:
+        raise HTTPException(status_code=503, detail="Service not ready")
+
+    suffix = os.path.splitext(audio.filename)[1] or ".webm"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        content = await audio.read()
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        raw_text = service.transcribe(tmp_path)
+        return {"success": True, "text": raw_text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+    finally:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+
+
+@app.post("/api/clean")
+async def clean_text(request: CleanRequest):
+    if not service:
+        raise HTTPException(status_code=503, detail="Service not ready")
+    try:
+        cleaned_text = service.clean_with_llm(
+            request.text,
+            system_prompt=request.system_prompt
+        )
+        return {"success": True, "text": cleaned_text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cleaning failed: {str(e)}")
