@@ -14,7 +14,20 @@ services:
     depends_on:
       - ollama
     environment:
-      - OLLAMA_HOST=http://ollama:11434
+      - WHISPER_MODEL=${WHISPER_MODEL:-base}
+      - LLM_BASE_URL=http://ollama:11434/v1
+      - LLM_API_KEY=${LLM_API_KEY:-ollama}
+      - LLM_MODEL=${LLM_MODEL:-llama3.2}
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
 
 volumes:
   ollama:
